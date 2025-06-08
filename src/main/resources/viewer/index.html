@@ -55,36 +55,13 @@
             console.error('Unhandled error:', event.error);
         });
 
-        window.addEventListener('unhandledrejection', (event) => {
-            const errorContainer = document.getElementById('error-container');
-            let message = 'An unhandled promise rejection occurred: ';
-            if (event.reason) {
-                if (event.reason instanceof Error) {
-                    message += event.reason.message;
-                    if (event.reason.stack) {
-                        message += '\n' + event.reason.stack;
-                    }
-                } else {
-                    try {
-                        message += JSON.stringify(event.reason, null, 2);
-                    } catch (e) {
-                        message += String(event.reason);
-                    }
-                }
-            } else {
-                message += 'No reason provided.';
-            }
-            errorContainer.style.whiteSpace = 'pre-wrap';
-            errorContainer.innerText = message;
-            errorContainer.style.display = 'block';
-            console.error('Unhandled rejection:', event.reason);
-        });
-
         let scene, camera, renderer, controls, gui;
         let modelDefaultCameraZ;
         let cameraParams;
         let mixer, clock;
         let ambientLight, directionalLight;
+        let targetZoom;
+        let isAnimatingZoom = false;
 
         function init() {
             scene = new THREE.Scene();
@@ -100,13 +77,18 @@
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             modelDefaultCameraZ = controls.getDistance();
+            targetZoom = modelDefaultCameraZ;
 
-            ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            ambientLight = new THREE.HemisphereLight(0xcccccc, 0x444444, 2);
             scene.add(ambientLight);
 
-            directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
             directionalLight.position.set(5, 10, 7.5);
             scene.add(directionalLight);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight2.position.set(-5, 10, -7.5);
+            scene.add(directionalLight2);
 
             setupGui();
 
@@ -128,7 +110,8 @@
 
             const params = {
                 backgroundColor: '#' + scene.background.getHexString(),
-                ambientColor: '#' + ambientLight.color.getHexString(),
+                ambientSkyColor: '#' + ambientLight.color.getHexString(),
+                ambientGroundColor: '#' + ambientLight.groundColor.getHexString(),
                 directionalColor: '#' + directionalLight.color.getHexString(),
             };
 
@@ -137,10 +120,13 @@
                 scene.background.set(value);
             });
 
-            const ambientFolder = environmentFolder.addFolder('Ambient Light');
-            ambientFolder.add(ambientLight, 'intensity', 0, 2).name('Intensity');
-            ambientFolder.addColor(params, 'ambientColor').name('Color').onChange((value) => {
+            const ambientFolder = environmentFolder.addFolder('Hemisphere Light');
+            ambientFolder.add(ambientLight, 'intensity', 0, 4).name('Intensity');
+            ambientFolder.addColor(params, 'ambientSkyColor').name('Sky Color').onChange((value) => {
                 ambientLight.color.set(value);
+            });
+            ambientFolder.addColor(params, 'ambientGroundColor').name('Ground Color').onChange((value) => {
+                ambientLight.groundColor.set(value);
             });
 
             const dirLightFolder = environmentFolder.addFolder('Directional Light');
@@ -159,14 +145,12 @@
                     return controls.getDistance();
                 },
                 set zoom(value) {
-                    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-                    camera.position.copy(controls.target).addScaledVector(direction, value);
-                    controls.update();
+                    isAnimatingZoom = true;
+                    targetZoom = value;
                 },
                 reset: () => {
-                    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-                    camera.position.copy(controls.target).addScaledVector(direction, modelDefaultCameraZ);
-                    controls.update();
+                    isAnimatingZoom = true;
+                    targetZoom = modelDefaultCameraZ;
                 }
             };
             cameraFolder.add(cameraParams, 'zoom', 0.1, 50).name('Zoom').listen();
@@ -185,6 +169,28 @@
             if (mixer) {
                 mixer.update(clock.getDelta());
             }
+
+            if (isAnimatingZoom) {
+                const currentDistance = controls.getDistance();
+                if (Math.abs(currentDistance - targetZoom) > 0.01) {
+                    const newDistance = THREE.MathUtils.lerp(currentDistance, targetZoom, 0.1);
+                    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+                    if (direction.lengthSq() > 0) {
+                        camera.position.copy(controls.target).addScaledVector(direction, newDistance);
+                    }
+                } else {
+                    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+                    if (direction.lengthSq() > 0) {
+                        camera.position.copy(controls.target).addScaledVector(direction, targetZoom);
+                    }
+                    isAnimatingZoom = false;
+                }
+            } else {
+                if (controls.enabled) {
+                    targetZoom = controls.getDistance();
+                }
+            }
+
             controls.update();
             renderer.render(scene, camera);
         }
@@ -292,6 +298,8 @@
                 controls.target.set(0, 0, 0);
                 controls.update();
                 modelDefaultCameraZ = controls.getDistance();
+                targetZoom = modelDefaultCameraZ;
+                isAnimatingZoom = false;
 
             }, undefined, (error) => {
                 console.error(error);
