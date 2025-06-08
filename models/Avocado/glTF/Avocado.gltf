@@ -3,7 +3,7 @@
     {
       "bufferView": 0,
       "componentType": 5126,
-      "count": 406,
+      "count": 40`6,
       "type": "VEC2"
     },
     {
@@ -11,8 +11,8 @@
       "componentType": 5126,
       "count": 406,
       "type": "VEC3"
-    }`,
-    {`
+    },
+    {
       "bufferView": 2,
       "componentType": 5126,
       "count": 406,

@@ -41,5 +41,6 @@ class GltfViewerToolWindowFactory : ToolWindowFactory {
         val path = file.path
         val url = "${getBaseUrl()}/files$path"
         browser.cefBrowser.executeJavaScript("loadGltf('$url')", file.url, 0)
+        browser.openDevtools()
     }
 }
