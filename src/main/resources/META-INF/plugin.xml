@@ -6,10 +6,7 @@
 
     <depends>com.intellij.modules.platform</depends>
 
-    <resource-bundle>messages.MyBundle</resource-bundle>
-
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.tolgacanunal.intellijgltfviewerplugin.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <postStartupActivity implementation="com.github.tolgacanunal.intellijgltfviewerplugin.startup.MyProjectActivity" />
+        <toolWindow factoryClass="com.github.tolgacanunal.intellijgltfviewerplugin.GltfViewerToolWindowFactory" id="GltfViewerToolWindowFactory"/>
     </extensions>
 </idea-plugin>
