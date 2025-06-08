@@ -132,24 +132,26 @@
                 directionalColor: '#' + directionalLight.color.getHexString(),
             };
 
-            gui.addColor(params, 'backgroundColor').name('Background').onChange((value) => {
+            const environmentFolder = gui.addFolder('Environment');
+            environmentFolder.addColor(params, 'backgroundColor').name('Background').onChange((value) => {
                 scene.background.set(value);
             });
 
-            const lightFolder = gui.addFolder('Lights');
-            lightFolder.add(ambientLight, 'intensity', 0, 2).name('Ambient');
-            lightFolder.addColor(params, 'ambientColor').name('Ambient Color').onChange((value) => {
+            const ambientFolder = environmentFolder.addFolder('Ambient Light');
+            ambientFolder.add(ambientLight, 'intensity', 0, 2).name('Intensity');
+            ambientFolder.addColor(params, 'ambientColor').name('Color').onChange((value) => {
                 ambientLight.color.set(value);
             });
 
-            const dirLightFolder = lightFolder.addFolder('Directional');
+            const dirLightFolder = environmentFolder.addFolder('Directional Light');
             dirLightFolder.add(directionalLight, 'intensity', 0, 2).name('Intensity');
-            dirLightFolder.addColor(params, 'directionalColor').name('Directional Color').onChange((value) => {
+            dirLightFolder.addColor(params, 'directionalColor').name('Color').onChange((value) => {
                 directionalLight.color.set(value);
             });
-            dirLightFolder.add(directionalLight.position, 'x', -20, 20);
-            dirLightFolder.add(directionalLight.position, 'y', -20, 20);
-            dirLightFolder.add(directionalLight.position, 'z', -20, 20);
+            dirLightFolder.add(directionalLight.position, 'x', -20, 20).name('Position X');
+            dirLightFolder.add(directionalLight.position, 'y', -20, 20).name('Position Y');
+            dirLightFolder.add(directionalLight.position, 'z', -20, 20).name('Position Z');
+            environmentFolder.close();
 
             const cameraFolder = gui.addFolder('Camera');
             cameraParams = {
@@ -169,6 +171,7 @@
             };
             cameraFolder.add(cameraParams, 'zoom', 0.1, 50).name('Zoom').listen();
             cameraFolder.add(cameraParams, 'reset').name('Reset Zoom');
+            cameraFolder.close();
         }
 
         function onWindowResize() {
@@ -212,6 +215,7 @@
                     let activeAction = null;
 
                     const animationPanel = gui.addFolder('Animations');
+                    animationPanel.close();
 
                     const animsByName = {};
                     animations.forEach((clip, i) => {

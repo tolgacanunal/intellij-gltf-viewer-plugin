@@ -20,7 +20,7 @@ class GltfViewerToolWindowFactory : ToolWindowFactory {
         val browser = JBCefBrowser("${getBaseUrl()}/viewer/index.html")
         val content = ContentFactory
             .getInstance()
-            .createContent(browser.component, "glTF Viewer", false)
+            .createContent(browser.component, "View", false)
 
         toolWindow.contentManager.addContent(content)
 
