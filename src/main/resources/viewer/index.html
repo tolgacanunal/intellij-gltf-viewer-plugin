@@ -83,6 +83,8 @@
         let scene, camera, renderer, controls, gui;
         let modelDefaultCameraZ;
         let cameraParams;
+        let mixer, clock;
+        let ambientLight, directionalLight;
 
         function init() {
             scene = new THREE.Scene();
@@ -99,13 +101,24 @@
             controls.enableDamping = true;
             modelDefaultCameraZ = controls.getDistance();
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambientLight);
 
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight = new THREE.DirectionalLight(0xffffff, 1);
             directionalLight.position.set(5, 10, 7.5);
             scene.add(directionalLight);
 
+            setupGui();
+
+            window.addEventListener('resize', onWindowResize, false);
+
+            animate();
+        }
+
+        function setupGui() {
+            if (gui) {
+                gui.destroy();
+            }
             gui = new GUI();
             window.addEventListener('keydown', (event) => {
                 if (event.key.toLowerCase() === 'h') {
@@ -156,10 +169,6 @@
             };
             cameraFolder.add(cameraParams, 'zoom', 0.1, 50).name('Zoom').listen();
             cameraFolder.add(cameraParams, 'reset').name('Reset Zoom');
-
-            window.addEventListener('resize', onWindowResize, false);
-
-            animate();
         }
 
         function onWindowResize() {
@@ -170,6 +179,9 @@
 
         function animate() {
             requestAnimationFrame(animate);
+            if (mixer) {
+                mixer.update(clock.getDelta());
+            }
             controls.update();
             renderer.render(scene, camera);
         }
@@ -182,22 +194,97 @@
                 if (currentModel) {
                     scene.remove(currentModel);
                 }
+                if (mixer) {
+                    mixer.stopAllAction();
+                    mixer = null;
+                    clock = null;
+                }
+
+                setupGui();
+
                 currentModel = gltf.scene;
+                const animations = gltf.animations;
                 scene.add(currentModel);
 
-                // Hide error on success
+                if (animations && animations.length) {
+                    clock = new THREE.Clock();
+                    mixer = new THREE.AnimationMixer(currentModel);
+                    let activeAction = null;
+
+                    const animationPanel = gui.addFolder('Animations');
+
+                    const animsByName = {};
+                    animations.forEach((clip, i) => {
+                        const name = clip.name || `Animation ${i + 1}`;
+                        animsByName[name] = clip;
+                    });
+
+                    const animParams = {
+                        clip: animations[0].name || 'Animation 1',
+                        play: () => {
+                            if (activeAction) {
+                                activeAction.paused = !activeAction.paused;
+                            } else {
+                                playSelectedAnimation();
+                            }
+                        },
+                        stop: () => {
+                            if (mixer) {
+                                mixer.stopAllAction();
+                                activeAction = null;
+                            }
+                        },
+                        time: 0,
+                    };
+
+                    function playSelectedAnimation() {
+                        if (mixer) {
+                            mixer.stopAllAction();
+                        }
+                        const clip = animsByName[animParams.clip];
+                        if (clip) {
+                            activeAction = mixer.clipAction(clip);
+                            activeAction.reset().play();
+                        }
+                    }
+
+                    animationPanel.add(animParams, 'clip', Object.keys(animsByName)).name('Animation').onChange(playSelectedAnimation);
+                    animationPanel.add(animParams, 'play').name('Play/Pause');
+                    animationPanel.add(animParams, 'stop').name('Stop');
+                    animationPanel.add(mixer, 'timeScale', 0.1, 2).name('Speed');
+
+                    playSelectedAnimation();
+                }
+
                 document.getElementById('error-container').style.display = 'none';
 
-                // Center the model
                 const box = new THREE.Box3().setFromObject(currentModel);
                 const center = box.getCenter(new THREE.Vector3());
                 currentModel.position.sub(center); // center the model
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
+
+                // Adjust camera clipping planes to fit the model and prevent clipping
+                if (maxDim > 0) {
+                    camera.near = Math.max(0.01, maxDim / 100);
+                    camera.far = maxDim * 100;
+                    camera.updateProjectionMatrix();
+                }
+
                 const fov = camera.fov * (Math.PI / 180);
-                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-                cameraZ *= 1.5; // zoom out a bit
-                camera.position.set(0, 1, cameraZ);
+                const aspect = camera.aspect;
+
+                const distanceToFitHeight = (size.y / 2) / Math.tan(fov / 2);
+                const horizontalFov = 2 * Math.atan(Math.tan(fov / 2) * aspect);
+                const distanceToFitWidth = (size.x / 2) / Math.tan(horizontalFov / 2);
+
+                let cameraZ = Math.max(distanceToFitHeight, distanceToFitWidth);
+                cameraZ += size.z / 2; // offset for model depth
+                cameraZ *= 1.2; // add 20% margin
+
+                const cameraY = size.y / 4; // slightly elevated camera
+
+                camera.position.set(0, cameraY, cameraZ);
                 controls.target.set(0, 0, 0);
                 controls.update();
                 modelDefaultCameraZ = controls.getDistance();
