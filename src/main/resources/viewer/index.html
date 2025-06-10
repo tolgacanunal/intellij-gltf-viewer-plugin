@@ -6,6 +6,7 @@
     <style>
         body {
             margin: 0;
+            overflow: hidden; /* Prevent scrollbars from appearing on the body */
         }
 
         canvas {
@@ -14,7 +15,7 @@
 
         #error-container {
             position: absolute;
-            top: 10px;
+            top: 50px;
             left: 10px;
             background-color: rgba(255, 0, 0, 0.7);
             color: white;
@@ -22,12 +23,96 @@
             border-radius: 5px;
             display: none;
             max-width: 80%;
+            z-index: 999;
+        }
+
+        #help-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 32px;
+            height: 32px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            text-align: center;
+            line-height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            font-family: 'Arial', sans-serif;
+            z-index: 1000;
+            user-select: none;
+            transition: background-color 0.2s ease;
+        }
+
+        #help-button:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        #help-dialog {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        #help-dialog-content {
+            background-color: #282828;
+            color: #f1f1f1;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        #help-dialog-close {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #help-dialog-close:hover,
+        #help-dialog-close:focus {
+            color: white;
+            text-decoration: none;
+        }
+
+        #help-dialog h2, #help-dialog h3 {
+            color: #ffffff;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
         }
     </style>
 </head>
 
 <body>
     <div id="error-container"></div>
+    <div id="help-button">?</div>
+    <div id="help-dialog">
+        <div id="help-dialog-content">
+            <span id="help-dialog-close">&times;</span>
+            <h2>Shortcuts</h2>
+            <p><b>R</b>: Reset all settings & view</p>
+            <p><b>H</b>: Toggle configuration panel</p>
+            <h3>Mouse Controls</h3>
+            <p><b>Left-click & drag</b>: Orbit camera</p>
+            <p><b>Right-click & drag</b>: Pan camera</p>
+            <p><b>Scroll wheel</b>: Zoom in/out</p>
+        </div>
+    </div>
     <script type="importmap">
     {
         "imports": {
@@ -57,19 +142,88 @@
 
         let scene, camera, renderer, controls, gui;
         let modelDefaultCameraZ;
-        let cameraParams;
         let mixer, clock;
         let ambientLight, directionalLight;
         let targetZoom;
         let isAnimatingZoom = false;
         let axesHelper, gridHelper;
-        let displayParams = {
+
+        const defaultDisplayParams = {
             showAxes: false,
             showGrid: true,
             wireframe: false,
             shadows: true
         };
+        let displayParams = { ...defaultDisplayParams };
         let groundPlane;
+
+        let modelInitialY, modelSize;
+
+        const defaultBackgroundColor = 0x222222;
+        const defaultAmbientLight = { color: 0xcccccc, groundColor: 0x444444, intensity: 2, position: new THREE.Vector3(0, 1, 0) };
+        const defaultDirectionalLight = { color: 0xffffff, intensity: 1.2, position: new THREE.Vector3(5, 10, 7.5) };
+
+        function resetAllSettings() {
+            displayParams = { ...defaultDisplayParams };
+
+            axesHelper.visible = displayParams.showAxes;
+            gridHelper.visible = displayParams.showGrid;
+
+            scene.background.set(defaultBackgroundColor);
+
+            ambientLight.color.set(defaultAmbientLight.color);
+            ambientLight.groundColor.set(defaultAmbientLight.groundColor);
+            ambientLight.intensity = defaultAmbientLight.intensity;
+            ambientLight.position.copy(defaultAmbientLight.position);
+
+            directionalLight.color.set(defaultDirectionalLight.color);
+            directionalLight.intensity = defaultDirectionalLight.intensity;
+            directionalLight.position.copy(defaultDirectionalLight.position);
+
+            if (currentModel) {
+                currentModel.traverse(node => {
+                    if (node.isMesh) {
+                        node.castShadow = displayParams.shadows;
+                        if (node.material) {
+                            const materials = Array.isArray(node.material) ? node.material : [node.material];
+                            materials.forEach(m => {
+                                if (m) m.wireframe = displayParams.wireframe;
+                            });
+                        }
+                    }
+                });
+                groundPlane.visible = displayParams.shadows;
+                directionalLight.castShadow = displayParams.shadows;
+
+                currentModel.position.set(0, modelInitialY, 0);
+
+                const fov = camera.fov * (Math.PI / 180);
+                const aspect = camera.aspect;
+                const distanceToFitHeight = (modelSize.y / 2) / Math.tan(fov / 2);
+                const horizontalFov = 2 * Math.atan(Math.tan(fov / 2) * aspect);
+                const distanceToFitWidth = (modelSize.x / 2) / Math.tan(horizontalFov / 2);
+
+                let cameraZ = Math.max(distanceToFitHeight, distanceToFitWidth);
+                cameraZ += modelSize.z / 2;
+                cameraZ *= 1.2;
+
+                camera.position.set(currentModel.position.x, currentModel.position.y + modelSize.y / 4, currentModel.position.z + cameraZ);
+                controls.target.copy(currentModel.position);
+                controls.update();
+                modelDefaultCameraZ = controls.getDistance();
+                targetZoom = modelDefaultCameraZ;
+                isAnimatingZoom = false;
+
+            } else {
+                camera.position.set(0, 1, 5);
+                controls.target.set(0, 0, 0);
+                controls.update();
+                modelDefaultCameraZ = controls.getDistance();
+                targetZoom = modelDefaultCameraZ;
+                isAnimatingZoom = false;
+            }
+            setupGui();
+        }
 
         function init() {
             scene = new THREE.Scene();
@@ -130,9 +284,25 @@
                     gui.open(gui._closed);
                 }
                 if (event.key.toLowerCase() === 'r') {
-                    if (cameraParams && cameraParams.reset) {
-                        cameraParams.reset();
-                    }
+                    resetAllSettings();
+                }
+            });
+
+            const helpButton = document.getElementById('help-button');
+            const helpDialog = document.getElementById('help-dialog');
+            const helpDialogClose = document.getElementById('help-dialog-close');
+
+            helpButton.addEventListener('click', () => {
+                helpDialog.style.display = 'block';
+            });
+
+            helpDialogClose.addEventListener('click', () => {
+                helpDialog.style.display = 'none';
+            });
+
+            window.addEventListener('click', (event) => {
+                if (event.target == helpDialog) {
+                    helpDialog.style.display = 'none';
                 }
             });
 
@@ -215,14 +385,9 @@
             dirLightFolder.add(directionalLight.position, 'z', -20, 20).name('Position Z');
             dirLightFolder.close();
 
-            gui.close();
+            gui.add({ reset: resetAllSettings }, 'reset').name('Reset Scene');
 
-            cameraParams = {
-                reset: () => {
-                    isAnimatingZoom = true;
-                    targetZoom = modelDefaultCameraZ;
-                }
-            };
+            gui.close();
         }
 
         function onWindowResize() {
@@ -289,7 +454,9 @@
                 const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
                 modelNode.position.sub(center);
-                currentModel.position.y = size.y / 2;
+                modelSize = size.clone();
+                modelInitialY = size.y / 2;
+                currentModel.position.y = modelInitialY;
 
                 currentModel.traverse(node => {
                     if (node.isMesh) {
