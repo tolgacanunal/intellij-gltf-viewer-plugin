@@ -62,6 +62,14 @@
         let ambientLight, directionalLight;
         let targetZoom;
         let isAnimatingZoom = false;
+        let axesHelper, gridHelper;
+        let displayParams = {
+            showAxes: false,
+            showGrid: false,
+            wireframe: false,
+            shadows: false
+        };
+        let groundPlane;
 
         function init() {
             scene = new THREE.Scene();
@@ -72,6 +80,7 @@
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
             document.body.appendChild(renderer.domElement);
 
             controls = new OrbitControls(camera, renderer.domElement);
@@ -84,11 +93,33 @@
 
             directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
             directionalLight.position.set(5, 10, 7.5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
             scene.add(directionalLight);
+            scene.add(directionalLight.target);
 
             const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight2.position.set(-5, 10, -7.5);
             scene.add(directionalLight2);
+
+            axesHelper = new THREE.AxesHelper(1);
+            axesHelper.visible = displayParams.showAxes;
+            scene.add(axesHelper);
+
+            gridHelper = new THREE.GridHelper(10, 10);
+            gridHelper.visible = displayParams.showGrid;
+            scene.add(gridHelper);
+
+            const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.5 });
+            groundPlane = new THREE.Mesh(
+                new THREE.PlaneGeometry(10, 10),
+                groundMaterial
+            );
+            groundPlane.rotation.x = -Math.PI / 2;
+            groundPlane.receiveShadow = true;
+            groundPlane.visible = displayParams.shadows;
+            scene.add(groundPlane);
 
             setupGui();
 
@@ -114,6 +145,39 @@
             }
             gui = new GUI();
             gui.title('Configurations')
+
+            const displayFolder = gui.addFolder('Display');
+            displayFolder.add(displayParams, 'showAxes').name('Show Axes').onChange((value) => {
+                axesHelper.visible = value;
+            });
+            displayFolder.add(displayParams, 'showGrid').name('Show Grid').onChange((value) => {
+                gridHelper.visible = value;
+            });
+            displayFolder.add(displayParams, 'wireframe').name('Wireframe').onChange((value) => {
+                if (currentModel) {
+                    currentModel.traverse((child) => {
+                        if (child.isMesh && child.material) {
+                            const materials = Array.isArray(child.material) ? child.material : [child.material];
+                            materials.forEach(m => {
+                                if (m) m.wireframe = value;
+                            });
+                        }
+                    });
+                }
+            });
+            displayFolder.add(displayParams, 'shadows').name('Shadows').onChange((value) => {
+                displayParams.shadows = value;
+                directionalLight.castShadow = value;
+                groundPlane.visible = value;
+                if (currentModel) {
+                    currentModel.traverse(node => {
+                        if (node.isMesh) {
+                            node.castShadow = value;
+                        }
+                    });
+                }
+            });
+            displayFolder.open();
 
             const params = {
                 backgroundColor: '#' + scene.background.getHexString(),
@@ -146,9 +210,9 @@
             dirLightFolder.addColor(params, 'directionalColor').name('Color').onChange((value) => {
                 directionalLight.color.set(value);
             });
-            dirLightFolder.add(directionalLight.position, 'x', -100, 100).name('Position X');
-            dirLightFolder.add(directionalLight.position, 'y', -100, 100).name('Position Y');
-            dirLightFolder.add(directionalLight.position, 'z', -100, 100).name('Position Z');
+            dirLightFolder.add(directionalLight.position, 'x', -20, 20).name('Position X');
+            dirLightFolder.add(directionalLight.position, 'y', -20, 20).name('Position Y');
+            dirLightFolder.add(directionalLight.position, 'z', -20, 20).name('Position Z');
             dirLightFolder.close();
 
             gui.close();
@@ -217,6 +281,19 @@
                 setupGui();
 
                 currentModel = gltf.scene;
+                currentModel.traverse(node => {
+                    if (node.isMesh) {
+                        node.castShadow = displayParams.shadows;
+                        node.receiveShadow = true;
+
+                        if (node.material) {
+                            const materials = Array.isArray(node.material) ? node.material : [node.material];
+                            materials.forEach(material => {
+                                if (material) material.wireframe = displayParams.wireframe;
+                            });
+                        }
+                    }
+                });
                 const animations = gltf.animations;
                 scene.add(currentModel);
 
@@ -279,8 +356,34 @@
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
 
-                // Adjust camera clipping planes to fit the model and prevent clipping
                 if (maxDim > 0) {
+                    // Update shadow camera to fit the model
+                    const shadowCamSize = maxDim * 1.5;
+                    directionalLight.shadow.camera.left = -shadowCamSize;
+                    directionalLight.shadow.camera.right = shadowCamSize;
+                    directionalLight.shadow.camera.top = shadowCamSize;
+                    directionalLight.shadow.camera.bottom = -shadowCamSize;
+                    const near = maxDim / 100;
+                    const far = maxDim * 4;
+                    directionalLight.shadow.camera.near = near > 0.1 ? near : 0.1;
+                    directionalLight.shadow.camera.far = far > near ? far : near + 100;
+                    directionalLight.shadow.camera.updateProjectionMatrix();
+                    directionalLight.target.position.set(0, 0, 0);
+
+                    axesHelper.scale.set(1, 1, 1).multiplyScalar(maxDim * 0.75);
+
+                    scene.remove(gridHelper);
+                    const gridSize = Math.ceil(maxDim) * 2;
+                    const gridDivisions = 20;
+                    gridHelper = new THREE.GridHelper(gridSize, gridDivisions);
+                    gridHelper.visible = displayParams.showGrid;
+                    scene.add(gridHelper);
+
+                    groundPlane.geometry.dispose();
+                    groundPlane.geometry = new THREE.PlaneGeometry(gridSize, gridSize);
+                    groundPlane.position.y = gridHelper.position.y - 0.001;
+
+                    // Adjust camera clipping planes to fit the model and prevent clipping
                     camera.near = Math.max(0.01, maxDim / 100);
                     camera.far = maxDim * 100;
                     camera.updateProjectionMatrix();
