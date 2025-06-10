@@ -128,7 +128,7 @@
             });
 
             const ambientFolder = environmentFolder.addFolder('Hemisphere Light');
-            ambientFolder.add(ambientLight, 'intensity', 0, 100).name('Intensity');
+            ambientFolder.add(ambientLight, 'intensity', 0, 20).name('Intensity');
             ambientFolder.addColor(params, 'ambientSkyColor').name('Sky Color').onChange((value) => {
                 ambientLight.color.set(value);
             });
@@ -136,15 +136,20 @@
                 ambientLight.groundColor.set(value);
             });
 
+            ambientFolder.add(ambientLight.position, 'x', -20, 20).name('Position X');
+            ambientFolder.add(ambientLight.position, 'y', -20, 20).name('Position Y');
+            ambientFolder.add(ambientLight.position, 'z', -20, 20).name('Position Z');
+            ambientFolder.close();
+
             const dirLightFolder = environmentFolder.addFolder('Directional Light');
-            dirLightFolder.add(directionalLight, 'intensity', 0, 100).name('Intensity');
+            dirLightFolder.add(directionalLight, 'intensity', 0, 20).name('Intensity');
             dirLightFolder.addColor(params, 'directionalColor').name('Color').onChange((value) => {
                 directionalLight.color.set(value);
             });
             dirLightFolder.add(directionalLight.position, 'x', -100, 100).name('Position X');
             dirLightFolder.add(directionalLight.position, 'y', -100, 100).name('Position Y');
             dirLightFolder.add(directionalLight.position, 'z', -100, 100).name('Position Z');
-            environmentFolder.close();
+            dirLightFolder.close();
 
             gui.close();
 
