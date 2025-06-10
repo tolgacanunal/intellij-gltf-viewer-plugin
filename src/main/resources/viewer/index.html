@@ -65,9 +65,9 @@
         let axesHelper, gridHelper;
         let displayParams = {
             showAxes: false,
-            showGrid: false,
+            showGrid: true,
             wireframe: false,
-            shadows: false
+            shadows: true
         };
         let groundPlane;
 
@@ -280,7 +280,17 @@
 
                 setupGui();
 
-                currentModel = gltf.scene;
+                const modelNode = gltf.scene;
+                currentModel = new THREE.Group();
+                currentModel.add(modelNode);
+                scene.add(currentModel);
+
+                const box = new THREE.Box3().setFromObject(modelNode);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                modelNode.position.sub(center);
+                currentModel.position.y = size.y / 2;
+
                 currentModel.traverse(node => {
                     if (node.isMesh) {
                         node.castShadow = displayParams.shadows;
@@ -295,11 +305,10 @@
                     }
                 });
                 const animations = gltf.animations;
-                scene.add(currentModel);
 
                 if (animations && animations.length) {
                     clock = new THREE.Clock();
-                    mixer = new THREE.AnimationMixer(currentModel);
+                    mixer = new THREE.AnimationMixer(modelNode);
                     let activeAction = null;
 
                     const animationPanel = gui.addFolder('Animations');
@@ -350,11 +359,15 @@
 
                 document.getElementById('error-container').style.display = 'none';
 
-                const box = new THREE.Box3().setFromObject(currentModel);
-                const center = box.getCenter(new THREE.Vector3());
-                currentModel.position.sub(center); // center the model
-                const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
+
+                const transformFolder = gui.addFolder('Transform');
+                const posRange = maxDim > 0 ? maxDim * 2 : 20;
+                const updateTarget = () => controls.target.copy(currentModel.position);
+                transformFolder.add(currentModel.position, 'x', -posRange, posRange, 0.01).name('Position X').onChange(updateTarget);
+                transformFolder.add(currentModel.position, 'y', -posRange, posRange, 0.01).name('Position Y').onChange(updateTarget);
+                transformFolder.add(currentModel.position, 'z', -posRange, posRange, 0.01).name('Position Z').onChange(updateTarget);
+                transformFolder.open();
 
                 if (maxDim > 0) {
                     // Update shadow camera to fit the model
@@ -400,10 +413,8 @@
                 cameraZ += size.z / 2; // offset for model depth
                 cameraZ *= 1.2; // add 20% margin
 
-                const cameraY = size.y / 4; // slightly elevated camera
-
-                camera.position.set(0, cameraY, cameraZ);
-                controls.target.set(0, 0, 0);
+                camera.position.set(currentModel.position.x, currentModel.position.y + size.y / 4, currentModel.position.z + cameraZ);
+                controls.target.copy(currentModel.position);
                 controls.update();
                 modelDefaultCameraZ = controls.getDistance();
                 targetZoom = modelDefaultCameraZ;
