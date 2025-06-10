@@ -94,6 +94,17 @@
 
             window.addEventListener('resize', onWindowResize, false);
 
+            window.addEventListener('keydown', (event) => {
+                if (event.key.toLowerCase() === 'h') {
+                    gui.open(gui._closed);
+                }
+                if (event.key.toLowerCase() === 'r') {
+                    if (cameraParams && cameraParams.reset) {
+                        cameraParams.reset();
+                    }
+                }
+            });
+
             animate();
         }
 
@@ -102,11 +113,7 @@
                 gui.destroy();
             }
             gui = new GUI();
-            window.addEventListener('keydown', (event) => {
-                if (event.key.toLowerCase() === 'h') {
-                    gui.domElement.style.display = gui.domElement.style.display === 'none' ? 'block' : 'none';
-                }
-            });
+            gui.title('Configurations')
 
             const params = {
                 backgroundColor: '#' + scene.background.getHexString(),
@@ -121,7 +128,7 @@
             });
 
             const ambientFolder = environmentFolder.addFolder('Hemisphere Light');
-            ambientFolder.add(ambientLight, 'intensity', 0, 4).name('Intensity');
+            ambientFolder.add(ambientLight, 'intensity', 0, 100).name('Intensity');
             ambientFolder.addColor(params, 'ambientSkyColor').name('Sky Color').onChange((value) => {
                 ambientLight.color.set(value);
             });
@@ -130,32 +137,23 @@
             });
 
             const dirLightFolder = environmentFolder.addFolder('Directional Light');
-            dirLightFolder.add(directionalLight, 'intensity', 0, 2).name('Intensity');
+            dirLightFolder.add(directionalLight, 'intensity', 0, 100).name('Intensity');
             dirLightFolder.addColor(params, 'directionalColor').name('Color').onChange((value) => {
                 directionalLight.color.set(value);
             });
-            dirLightFolder.add(directionalLight.position, 'x', -20, 20).name('Position X');
-            dirLightFolder.add(directionalLight.position, 'y', -20, 20).name('Position Y');
-            dirLightFolder.add(directionalLight.position, 'z', -20, 20).name('Position Z');
+            dirLightFolder.add(directionalLight.position, 'x', -100, 100).name('Position X');
+            dirLightFolder.add(directionalLight.position, 'y', -100, 100).name('Position Y');
+            dirLightFolder.add(directionalLight.position, 'z', -100, 100).name('Position Z');
             environmentFolder.close();
 
-            const cameraFolder = gui.addFolder('Camera');
+            gui.close();
+
             cameraParams = {
-                get zoom() {
-                    return controls.getDistance();
-                },
-                set zoom(value) {
-                    isAnimatingZoom = true;
-                    targetZoom = value;
-                },
                 reset: () => {
                     isAnimatingZoom = true;
                     targetZoom = modelDefaultCameraZ;
                 }
             };
-            cameraFolder.add(cameraParams, 'zoom', 0.1, 50).name('Zoom').listen();
-            cameraFolder.add(cameraParams, 'reset').name('Reset Zoom');
-            cameraFolder.close();
         }
 
         function onWindowResize() {
@@ -197,9 +195,11 @@
 
         let currentModel;
 
-        function loadGltf(path) {
+        async function loadGltf(path) {
             const loader = new GLTFLoader();
-            loader.load(path, (gltf) => {
+            try {
+                const gltf = await loader.loadAsync(path);
+
                 if (currentModel) {
                     scene.remove(currentModel);
                 }
@@ -301,12 +301,12 @@
                 targetZoom = modelDefaultCameraZ;
                 isAnimatingZoom = false;
 
-            }, undefined, (error) => {
+            } catch (error) {
                 console.error(error);
                 const errorContainer = document.getElementById('error-container');
                 errorContainer.innerText = 'Error loading GLTF: ' + error.message;
                 errorContainer.style.display = 'block';
-            });
+            }
         }
         // Make functions globally available
         window.loadGltf = loadGltf;
