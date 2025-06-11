@@ -1,12 +1,53 @@
-# Intellij gLTF Viewer Plugin
+# glTF Viewer for JetBrains IDEs
 
 ![Build](https://github.com/tolgacanunal/intellij-gltf-viewer-plugin/workflows/Build/badge.svg)
 [![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 
 <!-- Plugin description -->
-Intellij gLTF Viewer Plugin
+This plugin allows you to view glTF (`.gltf` and `.glb`) files. It provides an interactive viewer with extensive controls to inspect your 3D models without leaving the IDE. 
 <!-- Plugin description end -->
+
+## Features
+
+- **Seamless Integration**: Automatically opens a tool window when you select a `.gltf` or `.glb` file.
+- **Interactive 3D Viewer**: A feature-rich viewer powered by `three.js`.
+- **Camera Controls**: Intuitive controls for orbiting, panning, and zooming.
+- **Scene Customization**:
+  - Toggle visibility of grid and axes helpers.
+  - Switch to wireframe mode to inspect model geometry.
+- **Lighting Control**:
+  - Adjust Hemisphere and Directional lights (color, intensity, position).
+  - Enable or disable shadows for more realistic rendering.
+  - Customize background color.
+- **Animation Support**:
+  - If your model has animations, you can play, pause, and stop them.
+  - Select from multiple animation clips.
+  - Control the playback speed.
+- **Model Transform**: Adjust the position of the model within the scene.
+
+## Showcase
+
+Here are some screenshots and a video demonstrating the plugin in action.
+
+_A screenshot of the viewer with a model loaded._
+![Viewer Screenshot](showcase/screenshot.png)
+
+_A brief video showing the features._
+[![Viewer Demo Video](showcase/video_placeholder.png)](https://example.com/video-link)
+
+*(You can replace `art/screenshot.png` and `art/video_placeholder.png` with actual paths to your media. I'd recommend creating an `art` directory in your project for these.)*
+
+## Controls and Shortcuts
+
+### Mouse Controls
+- **Left-click & drag**: Orbit the camera around the model.
+- **Right-click & drag**: Pan the camera.
+- **Scroll wheel**: Zoom in and out.
+
+### Keyboard Shortcuts
+- **H**: Toggle the configuration panel.
+- **R**: Reset the view and all settings to their default state.
 
 ## Installation
 

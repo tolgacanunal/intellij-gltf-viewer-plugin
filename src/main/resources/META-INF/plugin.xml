@@ -1,12 +1,12 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.github.tolgacanunal.intellijgltfviewerplugin</id>
-    <name>gLTF Viewer</name>
+    <name>glTF Viewer</name>
     <vendor>tolgacanunal</vendor>
 
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.tolgacanunal.intellijgltfviewerplugin.GltfViewerToolWindowFactory" id="gLTFViewer"/>
+        <toolWindow factoryClass="com.github.tolgacanunal.intellijgltfviewerplugin.GltfViewerToolWindowFactory" id="glTF Viewer"/>
     </extensions>
 </idea-plugin>
