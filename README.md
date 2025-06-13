@@ -6,6 +6,9 @@
 
 <!-- Plugin description -->
 This plugin allows you to view glTF (`.gltf` and `.glb`) files. It provides an interactive viewer with extensive controls to inspect your 3D models without leaving the IDE. 
+
+https://github.com/tolgacanunal/intellij-gltf-viewer-plugin
+
 <!-- Plugin description end -->
 
 ## Features
@@ -30,13 +33,14 @@ This plugin allows you to view glTF (`.gltf` and `.glb`) files. It provides an i
 
 Here are some screenshots and a video demonstrating the plugin in action.
 
-_A screenshot of the viewer with a model loaded._
-![Viewer Screenshot](showcase/screenshot.png)
+
+| 1                                    | 2 |
+|:-------------------------------------|--------|
+| ![Viewer Screenshot](showcase/1.png) |![Viewer Screenshot](showcase/2.png)|
+
 
 _A brief video showing the features._
-[![Viewer Demo Video](showcase/video_placeholder.png)](https://example.com/video-link)
 
-*(You can replace `art/screenshot.png` and `art/video_placeholder.png` with actual paths to your media. I'd recommend creating an `art` directory in your project for these.)*
 
 ## Controls and Shortcuts
 
