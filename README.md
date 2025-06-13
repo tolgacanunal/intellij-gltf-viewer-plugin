@@ -1,8 +1,8 @@
 # glTF Viewer for JetBrains IDEs
 
 ![Build](https://github.com/tolgacanunal/intellij-gltf-viewer-plugin/workflows/Build/badge.svg)
-[![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
-[![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
+[![Version](https://img.shields.io/jetbrains/plugin/v/27640.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/27640.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 
 <!-- Plugin description -->
 This plugin allows you to view glTF (`.gltf` and `.glb`) files. It provides an interactive viewer with extensive controls to inspect your 3D models without leaving the IDE. 
@@ -41,6 +41,8 @@ Here are some screenshots and a video demonstrating the plugin in action.
 
 _A brief video showing the features._
 [![Showcase]()(https://youtu.be/brXO7kojMpE)]
+
+[![Watch the demo on YouTube](https://img.youtube.com/vi/brXO7kojMpE/0.jpg)](https://www.youtube.com/watch?v=brXO7kojMpE)
 
 
 ## Controls and Shortcuts
