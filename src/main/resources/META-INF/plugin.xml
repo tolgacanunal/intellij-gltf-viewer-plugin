@@ -7,6 +7,6 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.tolgacanunal.intellijgltfviewerplugin.GltfViewerToolWindowFactory" id="glTF Viewer"/>
+        <toolWindow factoryClass="com.github.tolgacanunal.intellijgltfviewerplugin.GltfViewerToolWindowFactory" id="glTF Viewer" icon="/icons/toolWindowIcon@13x13.svg"/>
     </extensions>
 </idea-plugin>
