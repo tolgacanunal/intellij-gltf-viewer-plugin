@@ -41,6 +41,8 @@ Here are some screenshots and a video demonstrating the plugin in action.
 
 _A brief video showing the features._
 
+[![Watch the demo on YouTube](https://img.youtube.com/vi/brXO7kojMpE/0.jpg)](https://www.youtube.com/watch?v=brXO7kojMpE)
+
 
 ## Controls and Shortcuts
 
