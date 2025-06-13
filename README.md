@@ -40,6 +40,7 @@ Here are some screenshots and a video demonstrating the plugin in action.
 
 
 _A brief video showing the features._
+[![Showcase]()(https://youtu.be/brXO7kojMpE)]
 
 
 ## Controls and Shortcuts
