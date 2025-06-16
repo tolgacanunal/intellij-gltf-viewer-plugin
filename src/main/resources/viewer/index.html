@@ -145,7 +145,7 @@
         let mixer, clock;
         let ambientLight, directionalLight;
         let targetZoom;
-        let isAnimatingZoom = false;
+        let isAnimatingZoom = true;
         let axesHelper, gridHelper;
 
         const defaultDisplayParams = {
@@ -212,7 +212,7 @@
                 controls.update();
                 modelDefaultCameraZ = controls.getDistance();
                 targetZoom = modelDefaultCameraZ;
-                isAnimatingZoom = false;
+                isAnimatingZoom = true;
 
             } else {
                 camera.position.set(0, 1, 5);
@@ -220,7 +220,7 @@
                 controls.update();
                 modelDefaultCameraZ = controls.getDistance();
                 targetZoom = modelDefaultCameraZ;
-                isAnimatingZoom = false;
+                isAnimatingZoom = true;
             }
             setupGui();
         }
@@ -237,8 +237,11 @@
             renderer.shadowMap.enabled = true;
             document.body.appendChild(renderer.domElement);
 
+            clock = new THREE.Clock();
+
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
+            controls.enableZoom = false; // We'll handle zoom manually for a smoother experience
             modelDefaultCameraZ = controls.getDistance();
             targetZoom = modelDefaultCameraZ;
 
@@ -278,6 +281,7 @@
             setupGui();
 
             window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('wheel', onWheel, { passive: false });
 
             window.addEventListener('keydown', (event) => {
                 if (event.key.toLowerCase() === 'h') {
@@ -396,30 +400,41 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
+        function onWheel(event) {
+            event.preventDefault();
+            // Exponential scaling factor for per-pixel wheel deltas (works great
+            // on Apple trackpads and regular mouse wheels alike).
+            const ZOOM_SENSITIVITY = -0.002; // Negative so positive deltaY zooms OUT
+
+            /*
+             *  scale < 1  => zoom IN  (move camera closer)
+             *  scale > 1  => zoom OUT (move camera farther)
+             */
+            const scale = Math.exp(event.deltaY * ZOOM_SENSITIVITY);
+            targetZoom = THREE.MathUtils.clamp(targetZoom * scale, controls.minDistance, controls.maxDistance);
+            // Keep animating – it will smoothly converge every frame.
+        }
+
         function animate() {
             requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
             if (mixer) {
-                mixer.update(clock.getDelta());
+                mixer.update(delta);
             }
 
-            if (isAnimatingZoom) {
-                const currentDistance = controls.getDistance();
-                if (Math.abs(currentDistance - targetZoom) > 0.01) {
-                    const newDistance = THREE.MathUtils.lerp(currentDistance, targetZoom, 0.1);
-                    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-                    if (direction.lengthSq() > 0) {
-                        camera.position.copy(controls.target).addScaledVector(direction, newDistance);
-                    }
-                } else {
-                    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-                    if (direction.lengthSq() > 0) {
-                        camera.position.copy(controls.target).addScaledVector(direction, targetZoom);
-                    }
-                    isAnimatingZoom = false;
-                }
-            } else {
-                if (controls.enabled) {
-                    targetZoom = controls.getDistance();
+            // Always damp toward the desired target distance for ultra-smooth zoom.
+            const currentDistance = controls.getDistance();
+            if (Math.abs(currentDistance - targetZoom) > 1e-4) {
+                // The higher this constant the faster we converge, but a value
+                // around 8–10 feels natural and flicker-free.
+                const ZOOM_DAMPING = 10;
+                const lerpAlpha = 1 - Math.exp(-ZOOM_DAMPING * delta);
+                const newDistance = THREE.MathUtils.lerp(currentDistance, targetZoom, lerpAlpha);
+
+                const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+                if (direction.lengthSq() > 0) {
+                    camera.position.copy(controls.target).addScaledVector(direction, newDistance);
                 }
             }
 
@@ -440,7 +455,6 @@
                 if (mixer) {
                     mixer.stopAllAction();
                     mixer = null;
-                    clock = null;
                 }
 
                 setupGui();
@@ -474,7 +488,12 @@
                 const animations = gltf.animations;
 
                 if (animations && animations.length) {
-                    clock = new THREE.Clock();
+                    if (!clock) {
+                        clock = new THREE.Clock();
+                    } else {
+                        clock.stop();
+                        clock.start();
+                    }
                     mixer = new THREE.AnimationMixer(modelNode);
                     let activeAction = null;
 
@@ -585,7 +604,7 @@
                 controls.update();
                 modelDefaultCameraZ = controls.getDistance();
                 targetZoom = modelDefaultCameraZ;
-                isAnimatingZoom = false;
+                isAnimatingZoom = true;
 
             } catch (error) {
                 console.error(error);
