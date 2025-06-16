@@ -59,7 +59,7 @@ _A brief video showing the features._
 
 1) Plugin doesn't work IDEs without JCEF support:  **java.lang.IllegalStateException: JCEF is not supported in this env or failed to initialize:**
     - Select <kbd>Help</kbd> > <kbd>Find Action</kbd> from the IDE menu.
-    - Enter "Choose Boot Java Runtime for the IDE" and select it from the suggestion list.
+    - Enter **"Choose Boot Java Runtime for the IDE"** and select it from the suggestion list.
     - Select the latest bundled runtime that comes with JCEF support
     - Click  <kbd>OK</kbd> and restart the IDE
 
