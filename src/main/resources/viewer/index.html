@@ -141,11 +141,8 @@
         });
 
         let scene, camera, renderer, controls, gui;
-        let modelDefaultCameraZ;
         let mixer, clock;
         let ambientLight, directionalLight;
-        let targetZoom;
-        let isAnimatingZoom = false;
         let axesHelper, gridHelper;
 
         const defaultDisplayParams = {
@@ -210,17 +207,10 @@
                 camera.position.set(currentModel.position.x, currentModel.position.y + modelSize.y / 4, currentModel.position.z + cameraZ);
                 controls.target.copy(currentModel.position);
                 controls.update();
-                modelDefaultCameraZ = controls.getDistance();
-                targetZoom = modelDefaultCameraZ;
-                isAnimatingZoom = false;
-
             } else {
                 camera.position.set(0, 1, 5);
                 controls.target.set(0, 0, 0);
                 controls.update();
-                modelDefaultCameraZ = controls.getDistance();
-                targetZoom = modelDefaultCameraZ;
-                isAnimatingZoom = false;
             }
             setupGui();
         }
@@ -239,8 +229,11 @@
 
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            modelDefaultCameraZ = controls.getDistance();
-            targetZoom = modelDefaultCameraZ;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 0.1;
+            controls.maxDistance = 500;
+            controls.maxPolarAngle = Math.PI;
 
             ambientLight = new THREE.HemisphereLight(0xcccccc, 0x444444, 2);
             scene.add(ambientLight);
@@ -398,29 +391,9 @@
 
         function animate() {
             requestAnimationFrame(animate);
+            
             if (mixer) {
                 mixer.update(clock.getDelta());
-            }
-
-            if (isAnimatingZoom) {
-                const currentDistance = controls.getDistance();
-                if (Math.abs(currentDistance - targetZoom) > 0.01) {
-                    const newDistance = THREE.MathUtils.lerp(currentDistance, targetZoom, 0.1);
-                    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-                    if (direction.lengthSq() > 0) {
-                        camera.position.copy(controls.target).addScaledVector(direction, newDistance);
-                    }
-                } else {
-                    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-                    if (direction.lengthSq() > 0) {
-                        camera.position.copy(controls.target).addScaledVector(direction, targetZoom);
-                    }
-                    isAnimatingZoom = false;
-                }
-            } else {
-                if (controls.enabled) {
-                    targetZoom = controls.getDistance();
-                }
             }
 
             controls.update();
@@ -471,6 +444,7 @@
                         }
                     }
                 });
+                
                 const animations = gltf.animations;
 
                 if (animations && animations.length) {
@@ -567,6 +541,10 @@
                     camera.near = Math.max(0.01, maxDim / 100);
                     camera.far = maxDim * 100;
                     camera.updateProjectionMatrix();
+
+                    // Update controls distance limits
+                    controls.minDistance = maxDim * 0.1;
+                    controls.maxDistance = maxDim * 10;
                 }
 
                 const fov = camera.fov * (Math.PI / 180);
@@ -583,9 +561,6 @@
                 camera.position.set(currentModel.position.x, currentModel.position.y + size.y / 4, currentModel.position.z + cameraZ);
                 controls.target.copy(currentModel.position);
                 controls.update();
-                modelDefaultCameraZ = controls.getDistance();
-                targetZoom = modelDefaultCameraZ;
-                isAnimatingZoom = false;
 
             } catch (error) {
                 console.error(error);
@@ -594,6 +569,7 @@
                 errorContainer.style.display = 'block';
             }
         }
+        
         // Make functions globally available
         window.loadGltf = loadGltf;
 
